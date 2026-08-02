@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <!-- Sanders-Revived GitHub org -->
+  <remote name="sanders-revived"
+          fetch="https://github.com/Sanders-Revived" />
+
+  <!-- ===== Device / vendor / kernel (Sanders-Revived) ===== -->
+
+  <!-- Self-contained unified device tree; there is NO msm8953-common tree. -->
+  <project path="device/motorola/sanders"
+           name="device_motorola_sanders"
+           remote="sanders-revived"
+           revision="refs/heads/15.0" />
+
+  <!-- Fully pre-extracted blobs (1018 files, ~265 MiB). No on-device extraction needed. -->
+  <project path="vendor/motorola/sanders"
+           name="vendor_motorola_sanders"
+           remote="sanders-revived"
+           revision="refs/heads/15.0"
+           clone-depth="1" />
+
+  <!-- TARGET_KERNEL_SOURCE from BoardConfig.mk. Use 4.9.337 (non-KSU). -->
+  <project path="kernel/motorola/msm8953"
+           name="kernel_motorola_msm8953"
+           remote="sanders-revived"
+           revision="refs/heads/4.9.337" />
+
+  <!-- ===== LineageOS repos NOT in the base lineage-22.2 manifest ===== -->
+
+  <!-- Provides MotoActions, MotoCommonOverlay, libqsap_sdk,
+       vendor_fsg_mountpoint, rfs_msm_mpss_readonly_vendor_fsg_symlink -->
+  <project path="hardware/motorola"
+           name="LineageOS/android_hardware_motorola"
+           remote="github"
+           revision="refs/heads/lineage-22.2" />
+
+  <!-- dtbToolLineage host binary, required by BOARD_KERNEL_SEPARATED_DT := true.
+       Removed from the LineageOS manifest after lineage-18.1; the repo has no
+       newer branch, but its Android.bp is a plain cc_binary_host and still builds. -->
+  <project path="system/tools/dtbtool"
+           name="LineageOS/android_system_tools_dtbtool"
+           remote="github"
+           revision="refs/heads/lineage-18.1" />
+</manifest>

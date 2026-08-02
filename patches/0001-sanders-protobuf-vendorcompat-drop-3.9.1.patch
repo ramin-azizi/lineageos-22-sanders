@@ -1,0 +1,15 @@
+diff --git a/device.mk b/device.mk
+index 12b1059..67dd58d 100644
+--- a/device.mk
++++ b/device.mk
+@@ -294,8 +294,8 @@ PRODUCT_COPY_FILES += \
+ 
+ # Protobuf
+ PRODUCT_PACKAGES += \
+-    libprotobuf-cpp-full-3.9.1-vendorcompat \
+-    libprotobuf-cpp-lite-3.9.1-vendorcompat
++    libprotobuf-cpp-full-vendorcompat \
++    libprotobuf-cpp-lite-vendorcompat
+ 
+ # QMI
+ PRODUCT_PACKAGES += \

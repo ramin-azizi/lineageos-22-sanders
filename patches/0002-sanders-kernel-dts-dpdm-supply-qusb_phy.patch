@@ -1,0 +1,13 @@
+diff --git a/arch/arm64/boot/dts/qcom/msm8953-sanders.dtsi b/arch/arm64/boot/dts/qcom/msm8953-sanders.dtsi
+index cc6565ae3232..9b08d191bf77 100644
+--- a/arch/arm64/boot/dts/qcom/msm8953-sanders.dtsi
++++ b/arch/arm64/boot/dts/qcom/msm8953-sanders.dtsi
+@@ -689,7 +689,7 @@ reserved-memory {
+ 
+ &qpnp_smbcharger {
+ 	status = "okay";
+-	dpdm-supply = <&usb_otg>;
++	dpdm-supply = <&qusb_phy>;
+ 	/delete-property/ qcom,iterm-ma;
+ 	qcom,iterm-disabled;
+ 	qcom,usbid-disabled;
