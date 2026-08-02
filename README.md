@@ -1,5 +1,32 @@
 # LineageOS 22.2 (Android 15) for Moto G5S Plus (sanders)
 
+> ## ⛔ TWRP CANNOT INSTALL THIS ROM — you must use LineageOS Recovery
+>
+> **If TWRP gave you `Error 1` / "Error installing zip file", that is why. Nothing
+> is wrong with your download.**
+>
+> This ROM uses **retrofit dynamic partitions**. Its installer calls
+> `update_dynamic_partitions` and `map_partition`, which TWRP does not implement
+> for retrofit devices — it aborts immediately with a generic error 1.
+>
+> Flash the `recovery.img` from [Releases](../../releases) first:
+>
+> ```
+> fastboot flash recovery recovery.img
+> ```
+>
+> then sideload the ROM from **LineageOS Recovery**. Full steps in
+> [Flashing](#flashing) below.
+>
+> Two more things that surprise people, both normal:
+> - **"System wipe failed" during factory reset is expected.** Before the first
+>   install there is no super metadata to map, so system cannot be wiped. The line
+>   that matters is `Data wipe complete.` Do not try to fix this — the ROM
+>   installer creates that metadata itself.
+> - **This repartitions your phone.** `system` + `oem` become a single 5.1 GB
+>   `super`. A TWRP nandroid taken beforehand will **not** restore afterwards.
+>   Download stock Motorola firmware *before* you start if you might want to go back.
+
 An **unofficial** build of LineageOS 22.2 / Android 15 for the Motorola Moto G5S
 Plus (`sanders`, XT1801–XT1806, msm8953 / Snapdragon 625), plus everything needed
 to reproduce it.
