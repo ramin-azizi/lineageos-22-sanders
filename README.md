@@ -148,6 +148,70 @@ A successful install ends with `Install completed with status 0.` and
 `/dev/block/mapper/` then contains `system`, `vendor`, `product`, `odm`,
 `system_ext`.
 
+## ⛔ Flash the TWRP image to `recovery` — never to `boot`
+
+Learned the hard way on 2026-08-03. In TWRP's **Install → Install Image** screen
+you must pick the target partition, and `Boot` sits directly above `Recovery` in
+that list. Picking the wrong one bricks the phone into what looks like a
+"recovery bootloop", and the reason is a size mismatch:
+
+| partition | size | |
+|---|---:|---|
+| `boot` | 16,777,216 | `0x1000000` |
+| `recovery` | 21,073,920 | `0x1419000` |
+| `twrp-sanders-dt-20260802.img` | 20,037,632 | fits `recovery`, **3.26 MB too big for `boot`** |
+
+A truncated image on `boot` cannot boot, so the bootloader falls back to
+recovery on every startup — endlessly, and with no TWRP ever appearing on
+screen. Nothing is wiped and system is untouched; it just never gets there.
+
+### Getting out of it
+
+**`misc` cannot be cleared on this device.** The obvious fix — wiping the
+bootloader control block that requests a recovery boot — is refused by
+Motorola's bootloader even when `securestate: flashing_unlocked`:
+
+```
+fastboot erase misc     ->  (bootloader) Permission denied / FAILED
+fastboot flash misc ... ->  (bootloader) flash permission denied / FAILED
+```
+
+Restore `boot` instead, from the `boot.img` of whichever build is installed:
+
+```bash
+fastboot flash recovery twrp-sanders-dt-20260802.img   # or recovery.img
+fastboot flash boot boot.img                           # must match installed system
+fastboot reboot
+```
+
+`(bootloader) Image not signed or corrupt` during these writes is **normal** for
+unsigned custom images on an unlocked bootloader — the write still reports
+`OKAY` and works.
+
+### Verifying a recovery image before you flash it
+
+This device sets `BOARD_KERNEL_SEPARATED_DT := true`, so a valid image must
+carry an appended device tree — `dt_size` at offset 40 of the Android boot header
+must be **non-zero**, and here it should be `985,088`, the same as the official
+`recovery.img`. An image with `dt_size = 0` has no device tree and will not boot.
+
+```bash
+python3 - <<'EOF'
+import struct
+d = open('twrp-sanders-dt-20260802.img','rb').read()
+assert d[:8] == b'ANDROID!'
+print('dt_size =', struct.unpack('<I', d[40:44])[0])   # expect 985088
+EOF
+```
+
+You can also confirm a write landed correctly by reading the partition back
+rather than trusting `fastboot`:
+
+```bash
+adb shell 'dd if=/dev/block/bootdevice/by-name/recovery bs=512 count=39136' | sha256sum
+# expect 5d02a09a0962019017a949dbbcf5d15c78216e2786ef638ae2f9e4859f252f18
+```
+
 ## Google Apps: which packages fit
 
 Use an **Android 15 (`-15`) arm64** package — a `-14` package is the wrong one —
