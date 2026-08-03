@@ -1,0 +1,43 @@
+diff --git a/BoardConfig.mk b/BoardConfig.mk
+index 9b2b295..dc2c07e 100644
+--- a/BoardConfig.mk
++++ b/BoardConfig.mk
+@@ -177,10 +177,37 @@ BOARD_QTI_DYNAMIC_PARTITIONS_SIZE := 5096079360 # BOARD_SUPER_PARTITION_SIZE -4M
+ ifneq ($(WITH_GMS),true)
+ BOARD_SYSTEMIMAGE_PARTITION_RESERVED_SIZE := 137264995
+ BOARD_SYSTEMIMAGE_EXTFS_INODE_COUNT := -1
+-BOARD_PRODUCTIMAGE_PARTITION_RESERVED_SIZE := 392265885
+ BOARD_PRODUCTIMAGE_EXTFS_INODE_COUNT := -1
+ endif
+ 
++# Partitions - Explicit logical sizes (headroom for GApps)
++#
++# Without these, build_image.py auto-sizes every logical partition to
++# du(contents) * 1.1 + RESERVED_SIZE. That left system_ext 100% full
++# (1.2 MB free) and ~2.26 GB of `super` permanently unallocated, so no
++# GApps package larger than ~144 MB could be installed.
++#
++# Setting BOARD_*IMAGE_PARTITION_SIZE takes the fixed-size path in
++# build_image.py instead -- see the `"partition_size" not in prop_dict`
++# guard on the auto-size branch -- so it supersedes
++# BOARD_*IMAGE_PARTITION_RESERVED_SIZE for the same partition. The now-dead
++# BOARD_PRODUCTIMAGE_PARTITION_RESERVED_SIZE is therefore dropped above.
++#
++# system / vendor / odm are deliberately left on auto-sizing.
++#
++#   system      1135099904  (auto)
++#   vendor       399659008  (auto)
++#   odm            1413120  (auto)
++#   product     1610612736  (fixed, was 888205312 auto)
++#   system_ext   734003200  (fixed, was 409239552 auto)
++#   -------------------------------------------------------
++#   total       3880787968  vs BOARD_QTI_DYNAMIC_PARTITIONS_SIZE 5096079360
++#   slack       1215291392  (~1.21 GB of super left unallocated)
++#
++# The group maximum already covers this and does not need raising.
++BOARD_PRODUCTIMAGE_PARTITION_SIZE := 1610612736
++BOARD_SYSTEM_EXTIMAGE_PARTITION_SIZE := 734003200
++
+ BOARD_ROOT_EXTRA_SYMLINKS := \
+     /mnt/vendor/persist:/persist
+ 

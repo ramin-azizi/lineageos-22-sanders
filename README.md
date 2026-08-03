@@ -1,22 +1,26 @@
 # LineageOS 22.2 (Android 15) for Moto G5S Plus (sanders)
 
-> ## ⛔ TWRP CANNOT INSTALL THIS ROM — you must use LineageOS Recovery
+> ## ⛔ STOCK TWRP CANNOT INSTALL THIS ROM — use the TWRP from Releases, or LineageOS Recovery
 >
 > **If TWRP gave you `Error 1` / "Error installing zip file", that is why. Nothing
 > is wrong with your download.**
 >
 > This ROM uses **retrofit dynamic partitions**. Its installer calls
-> `update_dynamic_partitions` and `map_partition`, which TWRP does not implement
-> for retrofit devices — it aborts immediately with a generic error 1.
+> `update_dynamic_partitions` and `map_partition`, which stock/generic TWRP does
+> not implement for retrofit devices — it aborts immediately with a generic
+> error 1.
 >
-> Flash the `recovery.img` from [Releases](../../releases) first:
+> **Since 2026-08-03 there is a TWRP build here that does handle it.** Flash one
+> of these from [Releases](../../releases):
 >
 > ```
-> fastboot flash recovery recovery.img
+> fastboot flash recovery twrp-sanders-dt-20260802.img   # TWRP, retrofit-aware
+> fastboot flash recovery recovery.img                   # or LineageOS Recovery
 > ```
 >
-> then sideload the ROM from **LineageOS Recovery**. Full steps in
-> [Flashing](#flashing) below.
+> Use TWRP if you want to install from the phone's own storage with no PC;
+> use LineageOS Recovery for the upstream-documented `adb sideload` route. Full
+> steps in [Flashing](#flashing) below.
 >
 > Two more things that surprise people, both normal:
 > - **"System wipe failed" during factory reset is expected.** Before the first
@@ -31,13 +35,27 @@ An **unofficial** build of LineageOS 22.2 / Android 15 for the Motorola Moto G5S
 Plus (`sanders`, XT1801–XT1806, msm8953 / Snapdragon 625), plus everything needed
 to reproduce it.
 
-Built 2026-08-01. Download from [Releases](../../releases).
+Latest build 2026-08-03 (**v2**). Download from [Releases](../../releases).
 
 ```
-lineage-22.2-20260801-UNOFFICIAL-sanders.zip
-932 MB
-sha256: e1fabd9763535fd08c398e6547860a07e05468cf848752b2e078491c7dadddb0
+twrp-sanders-dt-20260802.img                  <- flash this in fastboot first
+19.1 MiB (20,037,632 bytes)
+sha256: 5d02a09a0962019017a949dbbcf5d15c78216e2786ef638ae2f9e4859f252f18
+
+lineage-22.2-20260803-UNOFFICIAL-sanders.zip  <- then install this in recovery
+932 MiB (977,653,935 bytes)
+sha256: 1ff8527cd8a498c49782b43fc7a070f9368d5bf4c094ba7a89c3063e1c5dfa9f
+
+NikGapps-core-15 or -basic-15 or -omni-15     <- then this, same session,
+not hosted here - get it from nikgapps.com       before the first boot
 ```
+
+**What v2 changed:** bigger `product` and `system_ext` logical partitions, so
+Google Apps fit. v1 built `system_ext` 100% full — 1.2 MB free — because the
+device tree set a reserved size for `system` and `product` but none for
+`system_ext`, which left `NikGapps-omni-15` short by ~45 MB. v2 gives `product`
+1536 MB (was 888 MB) and `system_ext` 700 MB (was 409 MB), with ~1.21 GB of
+`super` still unallocated. Nothing else differs between v1 and v2.
 
 ## Status — this is the first LOS 22 build for this device
 
@@ -46,10 +64,18 @@ newest community artifact found anywhere was
 `lineage-17.1-20230607-UNOFFICIAL-sanders.zip`. There is no community bug list
 because there was no release.
 
-**Confirmed working** on an XT1804 (this build, flashed 2026-08-02):
+**Confirmed working** on an XT1804 (**v1**, flashed 2026-08-02):
 - Boots
 - Camera works — despite `USE_CAMERA_STUB := true` in the device tree
 - Retrofit to dynamic partitions succeeded from ArrowOS 11
+- Google Apps (`NikGapps-core-15`) installed, Play Store working
+
+**The TWRP image is confirmed working on hardware** — it is installed and
+running on that phone, maps `super`, prepares all five logical partitions, and
+GApps have been installed through it.
+
+**v2 has not been flashed or booted yet.** It is v1 plus the partition-sizing
+patch and nothing else. Flash it on that understanding.
 
 **Untested / unknown:** fast charging (see patch 0002 below), VoLTE, Bluetooth,
 NFC, fingerprint.
@@ -67,20 +93,44 @@ logical partitions.
 
 Consequences:
 
-- **TWRP cannot install this ROM.** It does not implement `update_dynamic_partitions`
-  / `map_partition` for retrofit devices and aborts with a generic **error 1**.
-  Use LineageOS Recovery (`recovery.img`, attached to the release).
+- **Stock TWRP cannot install this ROM.** It does not implement
+  `update_dynamic_partitions` / `map_partition` for retrofit devices and aborts
+  with a generic **error 1**. Use either the TWRP built for this device
+  (`twrp-sanders-dt-20260802.img`) or LineageOS Recovery (`recovery.img`) — both
+  are attached to the release.
 - **A TWRP nandroid backup taken beforehand will not restore** onto a super
   layout. Returning to a stock-layout ROM means flashing stock Motorola firmware
   via fastboot first. Have it downloaded before you start.
 
 ## Flashing
 
-Sanders uses fastboot — no Odin, no tar repacking.
+Sanders uses fastboot — no Odin, no tar repacking. Pick one of two recoveries.
+
+### Route A — TWRP (no PC needed after the first step)
+
+```bash
+fastboot flash recovery twrp-sanders-dt-20260802.img
+# boot straight to recovery: Vol Down + Power -> Recovery
+```
+
+Then, in TWRP, with the zips on internal storage or a microSD:
+
+1. Install → `lineage-22.2-20260803-UNOFFICIAL-sanders.zip`
+2. Install → your GApps zip — **same session, before the first boot**
+3. Wipe → Advanced Wipe → Dalvik/ART Cache + Cache
+4. Reboot → System
+
+You do not have to wipe data to upgrade; the installer rebuilds the logical
+partitions inside `super` and does not touch `/data`.
+
+The **`-dt` suffix matters.** `BOARD_KERNEL_SEPARATED_DT := true` on this device,
+so the image carries an appended device tree — an image built without it will not
+boot as recovery.
+
+### Route B — LineageOS Recovery (the upstream-documented path)
 
 ```bash
 fastboot flash recovery recovery.img
-# boot straight to recovery: Vol Down + Power -> Recovery
 ```
 
 Then in LineageOS Recovery:
@@ -91,13 +141,41 @@ Then in LineageOS Recovery:
    `Data wipe complete.` is the line that matters. Do not try to fix this; the
    install creates the metadata itself.
 2. Apply update → Apply from ADB → `adb sideload lineage-22.2-...-sanders.zip`
-3. Google apps, if wanted, in the **same session before first boot** —
-   MindTheGapps **15** arm64 (not 14).
+3. Google apps, if wanted, in the **same session before first boot**.
 4. Reboot.
 
 A successful install ends with `Install completed with status 0.` and
 `/dev/block/mapper/` then contains `system`, `vendor`, `product`, `odm`,
 `system_ext`.
+
+## Google Apps: which packages fit
+
+Use an **Android 15 (`-15`) arm64** package — a `-14` package is the wrong one —
+and install it in the **same recovery session as the ROM, before the first
+boot**. The ROM install rewrites `/product` and `/system_ext`, so GApps added
+afterwards mean starting over from the ROM.
+
+| Package | Fits on v1 | Fits on v2 |
+|---|---|---|
+| `NikGapps-core-15` | yes | yes |
+| `NikGapps-basic-15` | yes | yes |
+| `NikGapps-omni-15` | **no** — short ~45 MB | **yes** |
+| `MindTheGapps-15` | tight | yes |
+
+Judge a NikGapps package by its **unpacked payload**, never by `unzip -l` on the
+outer zip: the payloads are nested compressed zips under `AppSet/*/App.zip`, so
+the outer listing undercounts badly.
+
+```bash
+unzip -q NikGapps-*.zip 'AppSet/*' -d /tmp/ng && du -sm /tmp/ng
+```
+
+**Check your download with `unzip -t` before flashing.** A truncated GApps zip is
+a common and very confusing failure — one downloaded during this project was
+corrupt and only `unzip -t` caught it.
+
+Because SELinux ships permissive here, **Play Integrity fails regardless of which
+GApps package you use** — banking apps and Google Wallet may refuse to run.
 
 ## Building it yourself
 
@@ -199,7 +277,48 @@ decompiled, and confirmed `dpdm-supply` resolves to `qusb@79000`.
 **This patch is unverified on real hardware.** It should make quick charge work as
 the maintainer intended, but that is reasoned from driver source, not observed.
 
-Both patches live on repo-managed checkouts, so `repo sync` discards them.
+### 0003 — enlarge `product` and `system_ext` (this is what makes v2 v2)
+
+The device tree sets `BOARD_*IMAGE_PARTITION_RESERVED_SIZE` for `system` and
+`product` but **nothing at all for `system_ext`**, so `system_ext` was auto-sized
+to its exact contents and shipped with **1.2 MB free**. Pooled free space across
+the writable logical partitions came to ~486 MB — enough for `NikGapps-core` or
+`basic`, but ~45 MB short of `omni`.
+
+Setting `BOARD_*IMAGE_PARTITION_SIZE` puts `partition_size` into the prop dict,
+which takes the fixed-size path instead of the auto-size one. Note that this
+**supersedes** `BOARD_*IMAGE_PARTITION_RESERVED_SIZE` for the same partition —
+reserved size is only ever read inside the auto-size branch — so the now-dead
+`BOARD_PRODUCTIMAGE_PARTITION_RESERVED_SIZE` was removed rather than left to
+mislead.
+
+| partition | v1 | v2 | mode |
+|---|---:|---:|---|
+| `product` | 888,205,312 | **1,610,612,736** | fixed (1536 MiB) |
+| `system_ext` | 409,239,552 | **734,003,200** | fixed (700 MiB) |
+| `system` | 1,135,099,904 | unchanged | auto |
+| `vendor` | 399,654,912 | unchanged | auto |
+| `odm` | 1,413,120 | unchanged | auto |
+| **allocated** | 2,833,616,896 | **3,880,783,872** | of 5,096,079,360 |
+
+`BOARD_QTI_DYNAMIC_PARTITIONS_SIZE` (5,096,079,360) was never the binding
+constraint — the per-partition auto-sizing was — so the group maximum is
+unchanged, as is `BOARD_SUPER_PARTITION_SIZE` (5,100,273,664). ~1.21 GB of
+`super` remains unallocated.
+
+Retrofit note: `super` spans two physical block devices here
+(`BOARD_SUPER_PARTITION_BLOCK_DEVICES := system oem`, 4,294,967,296 +
+805,306,368). liblp allocates extents across every block device in a group, so a
+1.6 GB `product` may span the boundary; `lpmake` validates the layout at build
+time, so an over-commit fails the build loudly rather than shipping a bad image.
+
+Side effect: `system_ext` now has a size, so it is built **sparse** where it was
+previously raw — the same treatment `system` and `product` already got. Benign.
+
+Verified in the shipped zip's `dynamic_partitions_op_list`, not just in the
+makefile.
+
+All three patches live on repo-managed checkouts, so `repo sync` discards them.
 
 ## Build gotchas
 
