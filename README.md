@@ -74,8 +74,65 @@ because there was no release.
 running on that phone, maps `super`, prepares all five logical partitions, and
 GApps have been installed through it.
 
-**v2 has not been flashed or booted yet.** It is v1 plus the partition-sizing
-patch and nothing else. Flash it on that understanding.
+**Confirmed working** on the same XT1804 (**v2**, 2026-08-08):
+- Boots
+- `NikGapps` installed, working
+- Magisk installed and working (see the version note below)
+
+### ⚠️ If v2 bootloops after you install GApps, your GApps package is too big
+
+This cost a week, so it is worth stating plainly: **v2 boots fine, but an
+oversized GApps package will put it in a permanent bootloop** that looks exactly
+like a broken ROM.
+
+The failure is a `system_server` crash-restart loop on a ~20 second cycle —
+not a hang. PackageManager never completes, so `/data/system/packages.xml` is
+never written. Count the attempts:
+
+```sh
+# in TWRP, /data mounted
+grep -ac 'No package manager settings file' /data/system/uiderrors.txt
+# one line per boot attempt; we measured 65 across 21 minutes
+```
+
+`/product` fill, same ROM, same device:
+
+```
+oversized GApps    1.3 G used of 1.4 G   93%    109 MB free   -> bootloop
+NikGapps           459 M used of 1.4 G   31%    1.0 G free    -> boots
+```
+
+**Use `NikGapps-core-15` (~144 MB). Do not use MindTheGapps (~507 MB).**
+The [GApps sizing table](#google-apps-which-packages-fit) has the details.
+
+There is no useful log to read while it is looping: pstore is empty, there is no
+`/proc/last_kmsg`, and a Java exception in `system_server` leaves no tombstone.
+`adbd` also never comes up during the loop, even on this `userdebug` build with
+`ro.debuggable=1` — seeding `/data/misc/adb/adb_keys` does not help, the device
+never enumerates on adb or fastboot. Do not spend time on that route.
+
+### ⚠️ Reinstalling the ROM does not remove GApps
+
+`addon.d` restores them. `backuptool.sh` runs `/system/addon.d/*.sh backup`
+before the wipe and restores after, so a plain reflash brings them straight back
+and the bootloop continues. To actually get rid of them:
+
+```sh
+mount -o rw /system_root                  # already rw in TWRP on this device
+mkdir -p /external_sd/addon.d-backup
+cp -a /system_root/system/addon.d/* /external_sd/addon.d-backup/
+rm -f /system_root/system/addon.d/*.sh
+# now install the ROM zip
+```
+
+Copy the scripts back to restore GApps survival across future updates.
+
+### Magisk
+
+Use a current Magisk. **Magisk 27.0 crashes `magiskd`** on this device with a
+scudo / `sqlite3_free` abort — it leaves a tombstone and is easy to mistake for
+the cause of a boot failure. It is not; it is a separate, real bug. Magisk 30.x
+is fine.
 
 **Untested / unknown:** fast charging (see patch 0002 below), VoLTE, Bluetooth,
 NFC, fingerprint.
